@@ -43,8 +43,12 @@ from django.views.decorators.http import (
 # Carrito.
 from .carrito import Carrito
 
-# Formulario del reporte.
-from .forms import ReporteFiltroForm
+# Formularios utilizados por las vistas.
+from .forms import (
+    ProductoFiltroForm,
+    ReporteFiltroForm,
+)
+
 
 # Modelos.
 from .models import (
@@ -74,21 +78,98 @@ def inicio(request):
 @login_required
 def tienda(request):
 
-    # Solo mostramos productos activos.
+    # -----------------------------------------------------
+    # CONSULTA INICIAL
+    # -----------------------------------------------------
+
+    # Recuperamos todos los productos activos.
     productos = (
         Producto.objects
-        .filter(activo=True)
-        .select_related("categoria")
-        .order_by("nombre")
+        .filter(
+            activo=True
+        )
+        .select_related(
+            "categoria"
+        )
+        .order_by(
+            "nombre"
+        )
     )
+
+
+    # -----------------------------------------------------
+    # FORMULARIO DE FILTROS
+    # -----------------------------------------------------
+
+    # Los filtros llegarán mediante GET.
+    #
+    # Ejemplo:
+    #
+    # /tienda/?busqueda=cafe&categoria=1
+    form = ProductoFiltroForm(
+        request.GET or None
+    )
+
+
+    # -----------------------------------------------------
+    # APLICAR FILTROS
+    # -----------------------------------------------------
+
+    if form.is_valid():
+
+        # Recuperamos la búsqueda escrita.
+        busqueda = (
+            form.cleaned_data.get(
+                "busqueda"
+            )
+        )
+
+        # Recuperamos la categoría seleccionada.
+        categoria = (
+            form.cleaned_data.get(
+                "categoria"
+            )
+        )
+
+
+        # ---------------------------------------------
+        # FILTRAR POR NOMBRE
+        # ---------------------------------------------
+
+        if busqueda:
+
+            # icontains realiza una búsqueda
+            # que no distingue mayúsculas
+            # y minúsculas.
+            productos = productos.filter(
+                nombre__icontains=busqueda
+            )
+
+
+        # ---------------------------------------------
+        # FILTRAR POR CATEGORÍA
+        # ---------------------------------------------
+
+        if categoria:
+
+            productos = productos.filter(
+                categoria=categoria
+            )
+
+
+    # -----------------------------------------------------
+    # MOSTRAR TEMPLATE
+    # -----------------------------------------------------
 
     return render(
         request,
         "tienda/lista.html",
         {
             "productos": productos,
+            "form": form,
         },
     )
+
 
 
 # =========================================================

@@ -77,7 +77,7 @@ class ProductoAdmin(admin.ModelAdmin):
 
 
 # =========================================================
-# DETALLE DEL PEDIDO DENTRO DEL PEDIDO
+# DETALLES DENTRO DEL PEDIDO
 # =========================================================
 
 class DetallePedidoInline(admin.TabularInline):
@@ -85,8 +85,16 @@ class DetallePedidoInline(admin.TabularInline):
     # Modelo que aparecerá dentro del pedido.
     model = DetallePedido
 
-    # No mostrar filas vacías adicionales.
+    # No crear filas vacías adicionales.
     extra = 0
+
+    # Campos que se visualizarán.
+    fields = (
+        "producto",
+        "cantidad",
+        "precio_unitario",
+    )
+
 
 
 # =========================================================
@@ -126,12 +134,15 @@ class PedidoAdmin(admin.ModelAdmin):
 @admin.register(DetallePedido)
 class DetallePedidoAdmin(admin.ModelAdmin):
 
+    # Columnas visibles.
     list_display = (
         "pedido",
         "producto",
         "cantidad",
+        "precio_unitario",
     )
 
+    # Campos que pueden buscarse.
     search_fields = (
         "producto__nombre",
         "pedido__usuario__username",

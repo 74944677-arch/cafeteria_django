@@ -23,11 +23,12 @@
     <br>
 
 
-    <strong>
-        Estado:
-    </strong>
+<strong>
+    Estado:
+</strong>
 
-    {{ pedido.get_estado_display }}
+{% include "pedidos/_estado_badge.html" with pedido=pedido %}
+
 
 
 </div>

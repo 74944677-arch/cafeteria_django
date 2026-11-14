@@ -179,11 +179,116 @@ def tienda(request):
 @login_required
 def ver_carrito(request):
 
+    # -----------------------------------------------------
+    # CARRITO ACTUAL
+    # -----------------------------------------------------
+
     carrito = Carrito(request)
 
     items, total = (
         carrito.obtener_items()
     )
+
+
+    # -----------------------------------------------------
+    # FORMULARIO DE BÚSQUEDA
+    # -----------------------------------------------------
+
+    form = ProductoFiltroForm(
+        request.GET or None
+    )
+
+
+    # -----------------------------------------------------
+    # RESULTADOS
+    # -----------------------------------------------------
+
+    # Al ingresar al carrito no mostraremos
+    # automáticamente todos los productos.
+    productos_disponibles = (
+        Producto.objects.none()
+    )
+
+    # Controlará si el bloque
+    # "Productos disponibles"
+    # debe mostrarse en el template.
+    mostrar_resultados = False
+
+
+    # -----------------------------------------------------
+    # FILTROS
+    # -----------------------------------------------------
+
+    if form.is_valid():
+
+        busqueda = (
+            form.cleaned_data.get(
+                "busqueda"
+            )
+        )
+
+        categoria = (
+            form.cleaned_data.get(
+                "categoria"
+            )
+        )
+
+
+        # Solo realizaremos la consulta si el usuario
+        # escribió una búsqueda o seleccionó
+        # una categoría.
+        if busqueda or categoria:
+
+            mostrar_resultados = True
+
+
+            # Productos que pueden agregarse.
+            productos_disponibles = (
+                Producto.objects
+                .filter(
+                    activo=True,
+                    stock__gt=0,
+                )
+                .select_related(
+                    "categoria"
+                )
+                .order_by(
+                    "nombre"
+                )
+            )
+
+
+            # ---------------------------------------------
+            # FILTRAR POR NOMBRE
+            # ---------------------------------------------
+
+            if busqueda:
+
+                productos_disponibles = (
+                    productos_disponibles
+                    .filter(
+                        nombre__icontains=busqueda
+                    )
+                )
+
+
+            # ---------------------------------------------
+            # FILTRAR POR CATEGORÍA
+            # ---------------------------------------------
+
+            if categoria:
+
+                productos_disponibles = (
+                    productos_disponibles
+                    .filter(
+                        categoria=categoria
+                    )
+                )
+
+
+    # -----------------------------------------------------
+    # TEMPLATE
+    # -----------------------------------------------------
 
     return render(
         request,
@@ -191,8 +296,21 @@ def ver_carrito(request):
         {
             "items": items,
             "total": total,
+
+            # Productos encontrados.
+            "productos_disponibles":
+                productos_disponibles,
+
+            # Formulario de búsqueda.
+            "form": form,
+
+            # Indica si deben mostrarse
+            # los resultados.
+            "mostrar_resultados":
+                mostrar_resultados,
         },
     )
+
 
 
 # =========================================================
@@ -825,6 +943,36 @@ def reportes(request):
         .order_by("-fecha")[:50]
     )
 
+# =====================================================
+    # PRODUCTOS CON BAJO STOCK
+    # =====================================================
+
+    # Este indicador representa el inventario ACTUAL.
+    #
+    # Por ello no depende de los filtros de fechas
+    # utilizados para los pedidos.
+    productos_bajo_stock = (
+        Producto.objects
+        .filter(
+            activo=True,
+            stock__lte=5,
+        )
+        .select_related(
+            "categoria"
+        )
+        .order_by(
+            "stock",
+            "nombre",
+        )
+    )
+
+
+    # Cantidad de productos actualmente
+    # en situación de bajo stock.
+    cantidad_bajo_stock = (
+        productos_bajo_stock.count()
+    )
+
 
     return render(
         request,
@@ -855,5 +1003,15 @@ def reportes(request):
 
             "pedidos_tabla":
                 pedidos_tabla,
+
+            # Productos de inventario
+            # con cinco unidades o menos.
+            "productos_bajo_stock":
+            productos_bajo_stock,
+
+            # Cantidad de productos
+            # con bajo stock.
+            "cantidad_bajo_stock":
+            cantidad_bajo_stock,
         },
     )
